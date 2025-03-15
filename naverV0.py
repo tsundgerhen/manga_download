@@ -152,7 +152,7 @@ def scrape_chapters_with_selenium(manga_url):
 
 # Main function
 def main():
-    manga_url = "https://comic.naver.com/webtoon/list?titleId=822874"
+    manga_url = "https://comic.naver.com/webtoon/list?titleId=814753"
     chapters = scrape_chapters_with_selenium(manga_url)
 
     for chapter_number, chapter_href in enumerate(chapters, start=1):  # Enumerate to generate chapter numbers

@@ -16,60 +16,68 @@ chaptersName = []  # Initialize chapter globally to store chapter titles
 
 # Function to download images for a specific chapter
 def download_images_for_chapter(chapter_number, chapter_url):
-    global chaptersName  # Use the global chapter variable
-    chapter_number_str = re.match(r"(\d+)", chaptersName[chapter_number - 1]).group(1)
+    """
+    Downloads images from a given chapter URL, creates a folder for each chapter, 
+    and processes the images.
+    """
+    global chaptersName  # Ensure global access to chapter names
+    
+    # Extract chapter number (fallback to direct numbering if regex fails)
+    try:
+        chapter_number_str = re.match(r"(\d+)", chaptersName[chapter_number - 1]).group(1)
+    except (IndexError, AttributeError):
+        chapter_number_str = str(chapter_number)
+
     print(f"Processing Chapter {chapter_number_str} at {chapter_url}")
 
     try:
-        response = requests.get(chapter_url)  # Correctly passing the URL here
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36'
+        }
+        response = requests.get(chapter_url, headers=headers)  
         response.raise_for_status()
+        
         soup = BeautifulSoup(response.text, "html.parser")
-        # Find images
+        
+        # Find images (check both 'data-src' and 'src')
         image_tags = soup.find_all("img", alt="comic content")
         if not image_tags:
-            print(f"No images found for Chapter {chaptersName[chapter_number - 1]}.")
+            print(f"No images found for Chapter {chapter_number}.")
             return
 
-        print(f"Found {len(image_tags)} images in Chapter {chaptersName[chapter_number - 1]}")
-        
-        # Use regular expression to extract the chapter number from chapter name
-        chapter_number_str = re.match(r"(\d+)", chaptersName[chapter_number - 1]).group(1)
-        
-        folder_name = f"{manga_title}/chapter-{chapter_number_str}"  # Use the extracted chapter number
+        print(f"Found {len(image_tags)} images in Chapter {chapter_number}")
+
+        # Create folder for chapter
+        folder_name = f"{manga_title}/chapter-{chapter_number_str}"
         os.makedirs(folder_name, exist_ok=True)
 
         current_page_index = 1
         for idx, img_tag in enumerate(image_tags):
-            img_url = img_tag.get("src")
-            if img_url and "thumbnail" not in img_url:  # Skip thumbnails by checking the URL
+            img_url = img_tag.get("data-src") or img_tag.get("src")
+            if img_url and "thumbnail" not in img_url:  
                 try:
-                    # Add User-Agent header to simulate a real browser request
-                    headers = {
-                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36'
-                    }
-
                     img_data = requests.get(img_url, headers=headers)
-                    img_data.raise_for_status()  # Check if the image download was successful
+                    img_data.raise_for_status()
 
-                    # Save image as a temporary file
-                    img_path = f"{folder_name}/temp-chapter-{chapter_number_str}_{idx + 1}.png"
+                    # Save image temporarily
+                    img_path = f"{folder_name}/temp_{idx + 1}.png"
                     with open(img_path, "wb") as img_file:
-                        img_file.write(img_data.content)  # Save the image
+                        img_file.write(img_data.content)
 
-                    # Optionally split large images into smaller pieces (if necessary)
+                    # Split large images
                     current_page_index = split_image(img_path, folder_name, manga_title, chapter_number, current_page_index)
 
-                    # Remove the temporary image after splitting
+                    # Remove temp file after processing
                     os.remove(img_path)
-                    print(f"Uploaded {img_path}")
+                    print(f"Downloaded: {img_path}")
 
                 except RequestException as e:
-                    print(f"Error downloading page {idx + 1} at {img_url}: {e}")
+                    print(f"Error downloading image {idx + 1}: {e}")
                 except Exception as e:
-                    print(f"Unexpected error while processing image {idx + 1}: {e}")
+                    print(f"Unexpected error with image {idx + 1}: {e}")
+
     except Exception as e:
         print(f"Error processing Chapter {chapter_number}: {e}")
-
 # Split large images into smaller pieces
 def split_image(image_path, output_folder, manga_title, chapter_number, start_page_index, piece_height=1600):
     """
@@ -222,15 +230,16 @@ def scrape_all_chapters(manga_url):
 
 # Main function
 def main():
-    manga_url = "https://comic.naver.com/webtoon/list?titleId=823663"
+    manga_url = "https://comic.naver.com/webtoon/list?titleId=814753"
     global manga_title
-    manga_title = "The Bad Son"
+    manga_title = "Weapon creater"
     
     # Scrape all chapters
     chapters, chapters_names = scrape_all_chapters(manga_url)
 
     # Print chapter links
-    for chapter_number, chapter_href in enumerate(chapters, start=1):
+    for chapter_number, chapter_tuple in enumerate(chapters[0:], start=1):
+        chapter_href = chapter_tuple[1]  # Extract the correct URL
         download_images_for_chapter(chapter_number, chapter_href)  # Pass the correct chapter number and URL
 
     print(f"Total chapters found: {len(chapters)}")

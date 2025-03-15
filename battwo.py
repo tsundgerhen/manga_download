@@ -163,14 +163,14 @@ def scrape_chapters(driver, manga_url):
 
 # Main function
 def main():
-    manga_url = "https://battwo.com/title/97485-the-predator-s-fiancee-official"
-    manga_title = "The Predator's Fiancée"
+    manga_url = "https://battwo.com/title/181053-muse-on-fame-official"
+    manga_title = "Muse on Fame"
 
     driver = setup_driver()
 
     try:
         chapters = scrape_chapters(driver, manga_url)
-        for chapter_number, chapter_url in chapters[93:]:
+        for chapter_number, chapter_url in chapters[0:]:
 
             download_images_for_chapter(driver, chapter_url, manga_title, chapter_number)
     finally:
